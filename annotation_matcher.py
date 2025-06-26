@@ -207,7 +207,9 @@ def main():
                     ],
                 }
             )
-    with open("output/matching_waggles.json", "w") as fp:
+    output_path = Path("output/matching_waggles.json")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w") as fp:
         json.dump(results, fp, indent=2)
 
 
