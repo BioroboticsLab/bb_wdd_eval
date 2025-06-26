@@ -1,6 +1,8 @@
+import argparse
 import datetime
 import json
 import math
+import sys
 from enum import Enum
 from pathlib import Path
 from zipfile import ZipFile
@@ -12,9 +14,6 @@ from tqdm import tqdm
 
 from coordinate_transformer import CoordinateTransformer
 
-MANUALLY_ANNOTATED_DATA_PATH = Path(
-    "/home/niklas/Documents/dev/uni/bees/bee-data/manual_annotations/Final_weltwinkel_tunnel_richtungsvektor.xlsx"
-)
 FRAMEDIR_HD = Path("/mnt/trove/wdd/wdd_videos_2024/single_camera_frames/")
 FRAMEDIR_WDD = Path("/mnt/trove/wdd/wdd_output_2024/fullframes")
 WDD_PATH = Path("/mnt/trove/wdd/")
@@ -40,7 +39,16 @@ def main():
     Returns a list of candidates from WDD data that match given data from
     manual annotations.
     """
-    tunnel_bees_df = pd.read_excel(MANUALLY_ANNOTATED_DATA_PATH, header=1)
+    parser = init_argparse()
+    args = parser.parse_args()
+    try:
+        manually_annotated_data_path = Path(args.manually_annotated_data_path)
+        validate_excel_path(manually_annotated_data_path)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    tunnel_bees_df = pd.read_excel(manually_annotated_data_path, header=1)
     results = dict()
     for cut_video_rel_path_str in tqdm(tunnel_bees_df["video_name"].unique()):
         # The names look like this:
@@ -395,6 +403,30 @@ def get_marker_coordinates_by_timestamp(detection_timestamp, df_markers):
     dfsel = df_markers.loc[df_markers["timestamp"] == timestamp_to_show]
     marker_coords = [(row["x"], row["y"]) for _, row in dfsel.iterrows()]
     return marker_coords
+
+
+def validate_excel_path(path: Path) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"File does not exist: {path}")
+    if not path.is_file():
+        raise ValueError(f"Not a file: {path}")
+    if path.suffix.lower() not in {".xls", ".xlsx"}:
+        raise ValueError(f"Not an Excel file: {path}")
+
+
+def init_argparse() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s <manually_annotated_data_path>",
+        description=(
+            "Finds waggle phase detections in WDD data that match manually annotated data."
+        ),
+    )
+    parser.add_argument(
+        "manually_annotated_data_path",
+        type=Path,
+        help="Path to the Excel file containing manual annotations",
+    )
+    return parser
 
 
 if __name__ == "__main__":
