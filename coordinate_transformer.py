@@ -4,7 +4,7 @@ import numpy as np
 
 class CoordinateTransformer:
     """
-    Given the marker WDD and HD marker coordinates, finds a homography so
+    Given the WDD and HD marker coordinates, finds a homography so
     coordinates can be transformed from one system to the other.
     """
 
