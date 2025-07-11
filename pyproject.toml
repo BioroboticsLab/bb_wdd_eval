@@ -1,7 +1,7 @@
 [project]
 name = "bb-wdd-eval"
 version = "0.1.0"
-description = "Add your description here"
+description = "Tools for evaluating the performance of the Waggle Dance Detector (WDD) system"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
