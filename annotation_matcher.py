@@ -23,9 +23,6 @@ CUT_VIDEO_DIR = Path("/mnt/local_storage/dance_videos_tunnel_2024/")
 HD_CAM_RESOLUTION = (3520, 4608)
 HD_CAM_FPS = 15
 
-TIME_DELTA = datetime.timedelta(seconds=0.5)
-COORDINATE_EPSILON = 100
-
 
 class TagStatus(Enum):
     tagged = 0
@@ -40,13 +37,15 @@ def main():
     manual annotations.
     """
     parser = init_argparse()
-    args = parser.parse_args()
+    args: MyArgs = parser.parse_args(namespace=MyArgs())
     try:
         manually_annotated_data_path = Path(args.manually_annotated_data_path)
         validate_excel_path(manually_annotated_data_path)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+    time_tolerance = args.time_tolerance
+    coordinate_tolerance = args.coordinate_tolerance
 
     tunnel_bees_df = pd.read_excel(manually_annotated_data_path, header=1)
     results = dict()
@@ -130,7 +129,7 @@ def main():
             candidates_after_timestamp_check = filtered_by_timestamp(
                 candidates=all_candidates,
                 video_starttime=timestamp,
-                delta=TIME_DELTA,
+                delta=time_tolerance,
                 start_frame=frame_offset
                 + manually_annotated_row["waggle_start_frames"],
                 video_fps=video_fps,
@@ -182,6 +181,7 @@ def main():
                     manually_annotated_data=manually_annotated_row,
                     df_markers_hd=df_markers_hd,
                     df_markers_wdd=df_markers_wdd,
+                    coordinate_tolerance=coordinate_tolerance,
                 )
             ]
 
@@ -282,7 +282,7 @@ def is_matching_coordinates(
     manually_annotated_data,
     df_markers_hd,
     df_markers_wdd,
-    epsilon=COORDINATE_EPSILON,
+    coordinate_tolerance,
 ) -> bool:
     wdd_markers = get_marker_coordinates_by_timestamp(
         detection_timestamp=datetime.datetime.isoformat(
@@ -308,7 +308,7 @@ def is_matching_coordinates(
     return is_adjacent(
         coordinates1=(x_wdd, y_wdd),
         coordinates2=(x_with_offset, y_with_offset),
-        epsilon=epsilon,
+        coordinate_tolerance=coordinate_tolerance,
     )
 
 
@@ -328,11 +328,11 @@ def fix_padding_error(coordinates: tuple[int, int]) -> tuple[int, int]:
 def is_adjacent(
     coordinates1: tuple[int, int],
     coordinates2: tuple[int, int],
-    epsilon: int = COORDINATE_EPSILON,
+    coordinate_tolerance: int,
 ) -> bool:
     x1, y1 = coordinates1
     x2, y2 = coordinates2
-    return abs(x1 - x2) <= epsilon and abs(y1 - y2) <= epsilon
+    return abs(x1 - x2) <= coordinate_tolerance and abs(y1 - y2) <= coordinate_tolerance
 
 
 def get_video_fps(video_path: Path) -> int:
@@ -414,6 +414,12 @@ def validate_excel_path(path: Path) -> None:
         raise ValueError(f"Not an Excel file: {path}")
 
 
+class MyArgs(argparse.Namespace):
+    manually_annotated_data_path: Path
+    time_tolerance: datetime.timedelta
+    coordinate_tolerance: int
+
+
 def init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         usage="%(prog)s <manually_annotated_data_path>",
@@ -426,7 +432,28 @@ def init_argparse() -> argparse.ArgumentParser:
         type=Path,
         help="Path to the Excel file containing manual annotations",
     )
+    parser.add_argument(
+        "--time_tolerance_sec",
+        dest="time_tolerance",
+        type=parse_timedelta,
+        default=datetime.timedelta(seconds=0.5),
+        help="Time tolerance in seconds for matching events (default: 0.5)",
+    )
+    parser.add_argument(
+        "--coordinate_tolerance_px",
+        dest="coordinate_tolerance",
+        type=int,
+        default=100,
+        help="Coordinate tolerance in pixels for spatial matching (default: 100)",
+    )
     return parser
+
+
+def parse_timedelta(value):
+    try:
+        return datetime.timedelta(seconds=float(value))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid time duration: {value}")
 
 
 if __name__ == "__main__":
