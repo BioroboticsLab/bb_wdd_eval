@@ -317,6 +317,11 @@ def is_matching_coordinates(
 
 
 def unrotate(rotated_coordinates: tuple[int, int]) -> tuple[int, int]:
+    """
+    Reverses the 90-degree rotation applied by the manual annotation tool
+    (bb_waggledance_annotator), converting coordinates back to the original HD
+    frame.
+    """
     (rotated_x, rotated_y) = rotated_coordinates
     x = rotated_y
     y = HD_CAM_RESOLUTION[1] - rotated_x
