@@ -47,6 +47,7 @@ def main():
     time_tolerance = args.time_tolerance
     coordinate_tolerance = args.coordinate_tolerance
     fix_padding_flag = args.fix_padding_flag
+    undo_rotation = args.undo_rotation
 
     tunnel_bees_df = pd.read_excel(manually_annotated_data_path, header=1)
     results = dict()
@@ -286,6 +287,7 @@ def is_matching_coordinates(
     df_markers_wdd,
     coordinate_tolerance,
     fix_padding_flag=False,
+    undo_rotation=False,
 ) -> bool:
     wdd_markers = get_marker_coordinates_by_timestamp(
         detection_timestamp=datetime.datetime.isoformat(
@@ -300,11 +302,12 @@ def is_matching_coordinates(
         df_markers=df_markers_hd,
     )
     converter = CoordinateTransformer(src_markers=hd_markers, dst_markers=wdd_markers)
-    # The dances were annotated using the clockwise rotation flag which means
-    # we need to reverse the rotation to get compatible coordinates.
-    x_hd_rotated = manually_annotated_data["waggle_start_positions_x"]
-    y_hd_rotated = manually_annotated_data["waggle_start_positions_y"]
-    x_hd, y_hd = unrotate((x_hd_rotated, y_hd_rotated))
+    x_hd = manually_annotated_data["waggle_start_positions_x"]
+    y_hd = manually_annotated_data["waggle_start_positions_y"]
+    if undo_rotation:
+        # The dances were annotated using the clockwise rotation flag which means
+        # we need to reverse the rotation to get compatible coordinates.
+        x_hd, y_hd = unrotate((x_hd, y_hd))
     x_wdd, y_wdd = converter.transform_coordinates(x=x_hd, y=y_hd)
     x, y = automatically_annotated_data["roi_center"]
     if fix_padding_flag:
@@ -464,6 +467,11 @@ def init_argparse() -> argparse.ArgumentParser:
         dest="fix_padding_flag",
         action="store_true",
         help="If set, accounts for a padding error in the WDD data",
+    )
+    parser.add_argument(
+        "--undo_rotation",
+        action="store_true",
+        help="If set, accounts for a 90 deg rotation in the manually annotated coordinates",
     )
     return parser
 
