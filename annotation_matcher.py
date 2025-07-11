@@ -46,6 +46,7 @@ def main():
         sys.exit(1)
     time_tolerance = args.time_tolerance
     coordinate_tolerance = args.coordinate_tolerance
+    fix_padding_flag = args.fix_padding_flag
 
     tunnel_bees_df = pd.read_excel(manually_annotated_data_path, header=1)
     results = dict()
@@ -182,6 +183,7 @@ def main():
                     df_markers_hd=df_markers_hd,
                     df_markers_wdd=df_markers_wdd,
                     coordinate_tolerance=coordinate_tolerance,
+                    fix_padding_flag=fix_padding_flag,
                 )
             ]
 
@@ -283,6 +285,7 @@ def is_matching_coordinates(
     df_markers_hd,
     df_markers_wdd,
     coordinate_tolerance,
+    fix_padding_flag=False,
 ) -> bool:
     wdd_markers = get_marker_coordinates_by_timestamp(
         detection_timestamp=datetime.datetime.isoformat(
@@ -304,10 +307,11 @@ def is_matching_coordinates(
     x_hd, y_hd = unrotate((x_hd_rotated, y_hd_rotated))
     x_wdd, y_wdd = converter.transform_coordinates(x=x_hd, y=y_hd)
     x, y = automatically_annotated_data["roi_center"]
-    x_with_offset, y_with_offset = fix_padding_error((x, y))
+    if fix_padding_flag:
+        x, y = fix_padding_error((x, y))
     return is_adjacent(
         coordinates1=(x_wdd, y_wdd),
-        coordinates2=(x_with_offset, y_with_offset),
+        coordinates2=(x, y),
         coordinate_tolerance=coordinate_tolerance,
     )
 
@@ -422,6 +426,7 @@ class MyArgs(argparse.Namespace):
     manually_annotated_data_path: Path
     time_tolerance: datetime.timedelta
     coordinate_tolerance: int
+    fix_padding_flag: bool
 
 
 def init_argparse() -> argparse.ArgumentParser:
@@ -448,6 +453,12 @@ def init_argparse() -> argparse.ArgumentParser:
         type=int,
         default=100,
         help="Coordinate tolerance in pixels for spatial matching (default: 100)",
+    )
+    parser.add_argument(
+        "--fix_padding_error",
+        dest="fix_padding_flag",
+        action="store_true",
+        help="If set, accounts for a padding error in the WDD data",
     )
     return parser
 
