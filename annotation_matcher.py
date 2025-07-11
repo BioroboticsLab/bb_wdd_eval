@@ -422,7 +422,6 @@ class MyArgs(argparse.Namespace):
 
 def init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        usage="%(prog)s <manually_annotated_data_path>",
         description=(
             "Finds waggle phase detections in WDD data that match manually annotated data."
         ),
