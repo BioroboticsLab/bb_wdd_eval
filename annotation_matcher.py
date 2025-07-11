@@ -320,7 +320,11 @@ def unrotate(rotated_coordinates: tuple[int, int]) -> tuple[int, int]:
 
 
 def fix_padding_error(coordinates: tuple[int, int]) -> tuple[int, int]:
-    """Adds a 125 pixel offset."""
+    """
+    Adds a 125 pixel offset to account for an error in the WDD output data
+    where the padding for the fields roi_center and roi_coordinates is applied
+    twice.
+    """
     x, y = coordinates
     return (x + 125, y + 125)
 
